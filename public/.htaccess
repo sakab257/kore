@@ -1,0 +1,86 @@
+# =====================================================
+# KORE - Configuration Apache (.htaccess)
+# C'est ici qu'on gère les URLs propres et la sécurité
+# =====================================================
+
+<IfModule mod_rewrite.c>
+    # On allume le moteur de réécriture d'URL
+    RewriteEngine On
+
+    # IMPORTANT : C'est la base de ton site.
+    # Si ton dossier s'appelle différemment de "kore", change-le ici !
+    RewriteBase /kore/public/
+
+    # Petit nettoyage : si l'URL finit par un slash inutile, on l'enlève.
+    # Ex: monsite.com/login/ devient monsite.com/login
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # LA RÈGLE D'OR (Router) :
+    # Si le fichier demandé n'existe pas physiquement (images, css...),
+    # on renvoie tout vers index.php qui se chargera de trier.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]
+</IfModule>
+
+# =====================================================
+# SÉCURITÉ DE BASE
+# =====================================================
+
+# On empêche les curieux de voir la liste de tes fichiers s'il n'y a pas d'index
+Options -Indexes
+
+# On masque la version d'Apache (moins d'infos pour les hackers)
+ServerSignature Off
+
+# Interdiction stricte de toucher aux fichiers cachés (.git, .env, etc.)
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# On protège les fichiers de config sensibles
+<FilesMatch "^(composer\.json|composer\.lock|package\.json)$">
+    Require all denied
+</FilesMatch>
+
+# =====================================================
+# PERFORMANCES (Compression & Cache)
+# =====================================================
+
+# On compresse les fichiers texte pour que le site charge plus vite (Gzip)
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+# On s'assure que le navigateur comprend bien quel type de fichier on lui envoie
+<IfModule mod_mime.c>
+    AddType text/css .css
+    AddType text/javascript .js
+    AddType image/svg+xml .svg
+    AddType font/woff2 .woff2
+</IfModule>
+
+# Mise en cache navigateur (Le navigateur garde les fichiers en mémoire)
+# Ça évite de retélécharger le logo ou le CSS à chaque page
+<IfModule mod_expires.c>
+    ExpiresActive On
+
+    # Les images restent en cache 1 an
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+
+    # Le CSS et JS restent 1 mois (pense à vider ton cache quand tu devs !)
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType text/javascript "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+
+    # Les polices d'écriture
+    ExpiresByType font/woff2 "access plus 1 year"
+</IfModule>
+
+# On force l'encodage universel (évite les bugs d'accents)
+AddDefaultCharset UTF-8
